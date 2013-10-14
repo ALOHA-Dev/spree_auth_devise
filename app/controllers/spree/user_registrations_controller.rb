@@ -24,11 +24,17 @@ class Spree::UserRegistrationsController < Devise::RegistrationsController
   def create
     @user = build_resource(params[:spree_user])
     if resource.save
-      set_flash_message(:notice, :signed_up)
-      sign_up(:spree_user, @user)
-      session[:spree_user_signup] = true
-      associate_user
-      sign_in_and_redirect(:spree_user, @user)
+      if resource.active_for_authentication?
+        set_flash_message(:notice, :signed_up)
+        sign_up(:spree_user, @user)
+        session[:spree_user_signup] = true
+        associate_user
+        sign_in_and_redirect(:spree_user, @user)
+      else
+        set_flash_message :notice, :"signed_up_but_#{resource.inactive_message}"
+        expire_session_data_after_sign_in!
+        respond_with resource, :location => after_inactive_sign_up_path_for(resource)
+      end
     else
       clean_up_passwords(resource)
       render :new
